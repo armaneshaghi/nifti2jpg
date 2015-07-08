@@ -1,0 +1,147 @@
+#!/home/arman/anaconda/bin/python
+__author__ = 'Arman Eshaghi'
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib
+import nibabel as nb
+import numpy as np
+import argparse
+import tempfile
+import os
+import matplotlib.gridspec as gridspec
+
+#can be command line arguments
+pic_numbers_per_row = 4
+mri_path = '/data-arman/fourd/patients/ANDAN/baseline_T1.nii'
+
+parser = argparse.ArgumentParser(description='nii to jpeg, by Arman Eshaghi, July 2015')
+parser.add_argument('--in', dest = 'mri_path',
+        help = 'path to MRI file (e.g., a nifti file ending with .nii')
+parser.add_argument('--row', dest = 'pic_numbers_per_row',
+        help = 'slices per row', type=int)
+
+parsed_args = parser.parse_args()
+
+def save_image(temp_path):
+    jpg_file = 'temp_image.jpg'
+    path = os.path.join(temp_path, jpg_file) 
+    plt.savefig(path, dpi = 50)
+    plt.close()
+    plt.clf()
+    plt.cla()
+    return None
+
+def find_size(img_data):
+    import nibabel as nb
+    x = img_data.shape[0]
+    y = img_data.shape[1]
+    z = img_data.shape[2]
+    return x, y, z
+
+def show_image(img_data, axis, coordinate,
+                fmri = False):
+    '''
+    function to plot mri data as image
+    axis = Direction of slice (axial, coronal, or sagittal) which is
+    a string ('x', 'y', or 'z')
+    coordinate = an integer indicating the coordinate of 
+    the axis
+    '''
+
+    if axis == 'x':
+        x = coordinate
+        plt1 = plt.imshow(np.rot90(img_data[x, :, :]),
+            cmap = plt.cm.gray,
+            interpolation = 'nearest')
+        plt1.axes.get_xaxis().set_ticks([])
+        plt1.axes.get_yaxis().set_ticks([])
+
+    elif axis == 'y':
+        y = coordinate
+        plt1 = plt.imshow(np.rot90(img_data[:, y, :]),
+                            cmap = plt.cm.gray,
+                            interpolation = 'nearest')
+        plt1.axes.get_xaxis().set_ticks([])
+        plt1.axes.get_yaxis().set_ticks([])
+
+    elif axis == 'z':
+        z = coordinate
+        plt1 = plt.imshow(np.rot90(img_data[:, :, z]),
+                            cmap = plt.cm.gray,
+                            interpolation = 'nearest')
+        plt1.axes.get_xaxis().set_ticks([])
+        plt1.axes.get_yaxis().set_ticks([])
+    return None
+
+mri_path = parsed_args.mri_path
+pic_numbers_per_row = parsed_args.pic_numbers_per_row
+temp_dir = tempfile.gettempdir() # current temporary directory
+#loading image data
+img_data = nb.load(mri_path)
+img_data = img_data.get_data()
+#use below 5 lines to make temporary jpeg file form nifti
+x, y, z = find_size(img_data)
+
+#gap between slices in each direction
+x_gap = x / ( pic_numbers_per_row + 2 )
+y_gap = y / ( pic_numbers_per_row + 2 )
+z_gap = z / ( pic_numbers_per_row + 2 )
+
+slices = np.zeros((pic_numbers_per_row, 3))
+
+for i in range(0, pic_numbers_per_row):
+    current_x = i * x_gap + x_gap
+    current_y = i * y_gap + y_gap
+    current_z = i * z_gap + z_gap
+    slices[i,0] = current_x
+    slices[i,1] = current_y
+    slices[i,2] = current_z
+
+columns = pic_numbers_per_row
+rows = 3
+figNo = 0
+width = columns * 20
+height = rows * 20
+fig = plt.figure(figsize = (width, height))
+
+figNo = 0
+
+plt.show()
+axialSlices = slices[:, 0]
+sagitalSlices = slices[:, 1]
+coronalSlices = slices[:, 2]
+
+for slice in axialSlices:
+    
+    f =  fig.add_subplot(rows, columns, figNo)
+    #drawing main volume
+    show_image(img_data = img_data,
+                    coordinate =  slice,
+                    axis = 'x')
+    figNo += 1
+    
+for slice in sagitalSlices:
+    
+    f =  fig.add_subplot(rows, columns, figNo)
+    #drawing main volume
+    show_image(img_data = img_data,
+                    coordinate = slice,
+                    axis = 'y')
+    figNo += 1
+
+for slice in coronalSlices:
+    f =  fig.add_subplot(rows, columns, figNo)
+    #drawing main volume
+    show_image(img_data = img_data,
+                    coordinate = slice,
+                    axis = 'z')
+    figNo += 1
+
+#plt.suptitle('MMain Main Main Main Main Main \nMain Main Main Main Main Main Main Main Main Main Main Main ain title',  fontsize=90, fontweight='bold',
+#            verticalalignment='top', multialignment='left')
+
+plt.figtext(0.47, 0.96, "Case A", color='r', ha ='right', fontsize = 100)
+plt.figtext(0.53, 0.96, "Case B", color='b', ha ='left', fontsize = 100)
+plt.figtext(0.50, 0.96, ' vs ', color='k', ha ='center', fontsize = 100)
+save_image(temp_path = temp_dir)
